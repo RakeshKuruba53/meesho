@@ -13,14 +13,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import lombok.AllArgsConstructor;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@AllArgsConstructor
 public class SecurityConfig {
 	CustomUserDetailsService customUserdetails;
 
 	@Bean
-	PasswordEncoder passEncoder() {
+	PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder(12);
 	}
 	@Bean
@@ -34,11 +37,9 @@ public class SecurityConfig {
 	AuthenticationProvider authenticationProvider() {
 		DaoAuthenticationProvider  provider=new DaoAuthenticationProvider();
 		provider.setUserDetailsService(customUserdetails);
-		provider.setPasswordEncoder(passEncoder());
+		provider.setPasswordEncoder(passwordEncoder());
 
 		return provider;
-	
 
-	
-}
+	}
 }

@@ -1,9 +1,13 @@
 package com.jsp.sap.serviceimpl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -77,10 +81,6 @@ public class AuthServiceImpl implements AuthService{
 				.setMessage("please verify emailid"),HttpStatus.CREATED);
 		
 	}
-		
-				
-		
-	
 	private User mapToSaveRespective(User user) {
 		switch (user.getUserRole()){
 		case SELLER-> {user=sellerRepo.save((Seller)user);}
@@ -89,5 +89,16 @@ public class AuthServiceImpl implements AuthService{
 			throw new IllegalArgumentException("Unexpected value: " + user.getUserRole());
 		}
 		return user;
+	}
+	@Scheduled(fixedDelay = 1000l)
+	public void clearNonVerifiedUsers() {
+		List<User> list = userRepo.findAll();
+		List<User> deleted=new ArrayList<>();
+		for(User user:list) {
+			if(user.isEmailVerified()==false) {
+				userRepo.delete(user);
+				
+			}
+		}
 	}
 	}

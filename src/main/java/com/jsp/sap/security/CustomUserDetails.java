@@ -8,7 +8,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import com.jsp.sap.entity.User;
 
 import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 @AllArgsConstructor
+@NoArgsConstructor
 public class CustomUserDetails implements UserDetails{
 	User user;
 
