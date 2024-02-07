@@ -16,9 +16,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @Data
 public class UserRequest {
-	@Column(unique = true)
+	
 	private String email;
-	@Column(unique = true)
 	private String password;
 	private UserRole userRole;
 	
