@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -27,15 +28,20 @@ import com.jsp.sap.responsedto.UserResponse;
 import com.jsp.sap.service.AuthService;
 import com.jsp.sap.util.ResponseStructure;
 
+import ch.qos.logback.core.encoder.Encoder;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
 @Service
 @AllArgsConstructor
+@NoArgsConstructor
 public class AuthServiceImpl implements AuthService{
 	SellerRepo sellerRepo;
 	CustomerRepo customerRepo;
 	ResponseStructure<UserResponse> responseStructure;
 	UserRepo userRepo;
+
+	  PasswordEncoder passwordEncoder;
 	
 	private UserResponse mapToUserResponse(User request) {
 		return UserResponse.builder()
@@ -56,7 +62,7 @@ public class AuthServiceImpl implements AuthService{
 		}
 	}
 	 user.setEmail(request.getEmail());
-	 user.setPassword(request.getPassword());
+	 user.setPassword(encoder.encode(request.getPassword()));
 	 user.setUserRole(request.getUserRole());
 	 String[] split = request.getEmail().split("@");
 	 user.setUserName(split[0]);
@@ -90,7 +96,7 @@ public class AuthServiceImpl implements AuthService{
 		}
 		return user;
 	}
-	@Scheduled(fixedDelay = 1000l)
+	@Scheduled(fixedDelay = 1000000l)
 	public void clearNonVerifiedUsers() {
 		List<User> list = userRepo.findAll();
 		List<User> deleted=new ArrayList<>();
