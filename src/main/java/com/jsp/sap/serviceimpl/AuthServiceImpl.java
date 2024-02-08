@@ -1,37 +1,73 @@
 package com.jsp.sap.serviceimpl;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Random;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import com.jsp.sap.cache.CacheStore;
 import com.jsp.sap.entity.Customer;
 import com.jsp.sap.entity.Seller;
 import com.jsp.sap.entity.User;
 import com.jsp.sap.enums.UserRole;
+import com.jsp.sap.exception.InvalidOtpException;
+import com.jsp.sap.exception.OtpExpiredException;
 import com.jsp.sap.exception.OtpVerifiedException;
+import com.jsp.sap.exception.SessionExpiredException;
 import com.jsp.sap.exception.UserExistException;
 import com.jsp.sap.exception.UserNotVerifiedException;
 import com.jsp.sap.exception.UserVerifiedException;
 import com.jsp.sap.repository.CustomerRepo;
 import com.jsp.sap.repository.SellerRepo;
 import com.jsp.sap.repository.UserRepo;
+import com.jsp.sap.requestdto.OtpModel;
 import com.jsp.sap.requestdto.UserRequest;
 import com.jsp.sap.responsedto.UserResponse;
 import com.jsp.sap.service.AuthService;
+import com.jsp.sap.util.MessageStructure;
 import com.jsp.sap.util.ResponseStructure;
 
+import ch.qos.logback.core.encoder.Encoder;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 @Service
-@AllArgsConstructor
+@Slf4j
+@NoArgsConstructor
 public class AuthServiceImpl implements AuthService{
+	@Autowired
 	SellerRepo sellerRepo;
+	@Autowired
 	CustomerRepo customerRepo;
+	@Autowired
 	ResponseStructure<UserResponse> responseStructure;
+	@Autowired
 	UserRepo userRepo;
+	@Autowired
+	private CacheStore<String> otpcacheStore;
+	@Autowired
+	private CacheStore<User> userCacheStore;
+	@Autowired
+	private JavaMailSender javaMailSender;
+	
+
+	
 	
 	private UserResponse mapToUserResponse(User request) {
 		return UserResponse.builder()
@@ -60,27 +96,27 @@ public class AuthServiceImpl implements AuthService{
 	}
 
 	@Override
-	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest user) {
-		User user2 = mapToUser(user);
-		if(userRepo.existsByEmail(user.getEmail())) {
-			if(user2.isEmailVerified()) {
-				throw new OtpVerifiedException("verified");
-			}
-			else {
-				throw new UserExistException("user Exist please verify");
-		}
+	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest request) {
+		
+		if(userRepo.existsByEmail(request.getEmail())) 
+			throw new UserExistException("User already Present with the given email");
+		
+		String otp = generateOtp();
+		User user = mapToUser(request);
+		userCacheStore.add(request.getEmail(),user );
+		otpcacheStore.add(request.getEmail(), otp);
+		try {
+			sendOtpToMail(user, otp);
+		} catch (MessagingException e) {
+			e.printStackTrace();
+			log.error("The Email Address Doesn't Exist");
 		}
 		
-		user2=mapToSaveRespective(user2);
 		return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure.setStatus(HttpStatus.CREATED.value())
-				.setData(mapToUserResponse(user2))
-				.setMessage("please verify emailid"),HttpStatus.CREATED);
+				.setData(mapToUserResponse(user))
+				.setMessage("please verify otp sent on email id"),HttpStatus.CREATED);
 		
 	}
-		
-				
-		
-	
 	private User mapToSaveRespective(User user) {
 		switch (user.getUserRole()){
 		case SELLER-> {user=sellerRepo.save((Seller)user);}
@@ -90,4 +126,62 @@ public class AuthServiceImpl implements AuthService{
 		}
 		return user;
 	}
+	@Scheduled(fixedDelay = 1000000l)
+	public void clearNonVerifiedUsers() {
+		List<User> list = userRepo.findAll();
+		List<User> deleted=new ArrayList<>();
+		for(User user:list) {
+			if(user.isEmailVerified()==false) {
+				userRepo.delete(user);
+			}
+		}
+	}
+	@Override
+	public ResponseEntity<ResponseStructure<UserResponse>> verifyOtp(OtpModel otpModel) {
+		User user=userCacheStore.get(otpModel.getEmail());
+		String otp = otpcacheStore.get(otpModel.getEmail());
+		if(otp==null) throw new OtpExpiredException("otp Expired");
+
+		if(user==null) throw new SessionExpiredException("Registration Session Expired");
+				
+		if(!otp.equals(otpModel.getOtp()))throw new InvalidOtpException("Invalid Otp");
+		
+			user.setEmailVerified(true);
+			userRepo.save(user);
+			return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure.setStatus(HttpStatus.CREATED.value())
+					.setData(mapToUserResponse(user))
+					.setMessage("Registration succesful!!"),HttpStatus.CREATED);
+		}
+		
+	public String generateOtp() {
+		return String.valueOf(new Random().nextInt(100000,999999));
+	}
+	public void sendOtpToMail(User user,String otp) throws MessagingException {
+		sendMail(MessageStructure.builder()
+		.to(user.getEmail())
+		.subject("Complete Your Registration to Meesho")
+		.sentDate(new Date())
+		.text(
+				"Hey, "+user.getUserName()
+				+" Good to See You Interested In Meesho,"
+				+" Complete your Registration Using Otp <br>"
+				+"<h1>"+otp+"</h1><br>"
+				+"Note : The Otp Expires In One minute"
+				+"<br><br>"
+				+"with best Regards<br>"
+				+"Meesho"
+				)
+		.build());
+	}
+	@Async
+	private void sendMail(MessageStructure messageStructure ) throws MessagingException {
+		MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+		MimeMessageHelper helper=new MimeMessageHelper(mimeMessage, true);
+		helper.setTo(messageStructure.getTo());
+		helper.setSubject(messageStructure.getSubject());
+		helper.setSentDate(messageStructure.getSentDate());
+		helper.setText(messageStructure.getText(),true);
+		javaMailSender.send(mimeMessage);
+	}
+	
 	}
