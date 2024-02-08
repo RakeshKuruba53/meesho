@@ -2,6 +2,7 @@ package com.jsp.sap.serviceimpl;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -45,7 +46,9 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 @Service
+@Slf4j
 @NoArgsConstructor
 public class AuthServiceImpl implements AuthService{
 	@Autowired
@@ -102,10 +105,16 @@ public class AuthServiceImpl implements AuthService{
 		User user = mapToUser(request);
 		userCacheStore.add(request.getEmail(),user );
 		otpcacheStore.add(request.getEmail(), otp);
+		try {
+			sendOtpToMail(user, otp);
+		} catch (MessagingException e) {
+			e.printStackTrace();
+			log.error("The Email Address Doesn't Exist");
+		}
 		
 		return new ResponseEntity<ResponseStructure<UserResponse>>(responseStructure.setStatus(HttpStatus.CREATED.value())
 				.setData(mapToUserResponse(user))
-				.setMessage("please verify otp"+otp),HttpStatus.CREATED);
+				.setMessage("please verify otp sent on email id"),HttpStatus.CREATED);
 		
 	}
 	private User mapToSaveRespective(User user) {
@@ -147,6 +156,23 @@ public class AuthServiceImpl implements AuthService{
 	public String generateOtp() {
 		return String.valueOf(new Random().nextInt(100000,999999));
 	}
+	public void sendOtpToMail(User user,String otp) throws MessagingException {
+		sendMail(MessageStructure.builder()
+		.to(user.getEmail())
+		.subject("Complete Your Registration to Meesho")
+		.sentDate(new Date())
+		.text(
+				"Hey, "+user.getUserName()
+				+" Good to See You Interested In Meesho,"
+				+" Complete your Registration Using Otp <br>"
+				+"<h1>"+otp+"</h1><br>"
+				+"Note : The Otp Expires In One minute"
+				+"<br><br>"
+				+"with best Regards<br>"
+				+"Meesho"
+				)
+		.build());
+	}
 	@Async
 	private void sendMail(MessageStructure messageStructure ) throws MessagingException {
 		MimeMessage mimeMessage = javaMailSender.createMimeMessage();
@@ -154,7 +180,7 @@ public class AuthServiceImpl implements AuthService{
 		helper.setTo(messageStructure.getTo());
 		helper.setSubject(messageStructure.getSubject());
 		helper.setSentDate(messageStructure.getSentDate());
-		helper.setText(messageStructure.getText());
+		helper.setText(messageStructure.getText(),true);
 		javaMailSender.send(mimeMessage);
 	}
 	
