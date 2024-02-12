@@ -1,11 +1,12 @@
 package com.jsp.sap.security;
 
-import java.beans.Customizer;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,7 +31,7 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity security) throws Exception {
 		return security.csrf(csrf->csrf.disable())
 				.authorizeHttpRequests(auth->auth.requestMatchers("/**").permitAll().anyRequest().authenticated())
-				.formLogin(org.springframework.security.config.Customizer.withDefaults())
+				.httpBasic(Customizer.withDefaults())
 				.build();
 	}
 	@Bean
@@ -40,8 +41,9 @@ public class SecurityConfig {
 		provider.setPasswordEncoder(passEncoder());
 
 		return provider;
-	
-
-	
 }
+	@Bean
+	AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+		return authenticationConfiguration.getAuthenticationManager();
+	}
 }

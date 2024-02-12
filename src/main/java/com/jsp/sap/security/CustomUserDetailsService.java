@@ -1,5 +1,6 @@
 package com.jsp.sap.security;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -10,11 +11,13 @@ import com.jsp.sap.serviceimpl.AuthServiceImpl;
 
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
-@AllArgsConstructor
-@NoArgsConstructor
+
 @Service
 public class CustomUserDetailsService implements UserDetailsService{
+
+	@Autowired
 UserRepo repo;
+
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 	return repo.findByUserName(username).map(user-> new CustomUserDetails(user))
