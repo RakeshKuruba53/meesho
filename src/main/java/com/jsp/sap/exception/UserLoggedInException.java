@@ -1,6 +1,4 @@
-package com.jsp.sap.util;
-
-import org.springframework.stereotype.Component;
+package com.jsp.sap.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,9 +9,6 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Component
-public class SimpleStructure {
+public class UserLoggedInException extends RuntimeException {
 	String message;
-	int status;
-
 }
