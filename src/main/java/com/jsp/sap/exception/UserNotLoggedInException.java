@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class UserNotLoggedInException extends RuntimeException {
 	String message;
 	HttpStatus httpStatus;
-	String data;
+	
 	
 
 

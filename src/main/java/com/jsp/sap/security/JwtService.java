@@ -10,6 +10,9 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -22,16 +25,16 @@ public class JwtService {
 	private Long accesExpirationInSeconds;
 	@Value("${myapp.refresh.expiry}")
 	private Long refreshExpirationInSeconds;
-	
-	
+
+
 	public String generateAccesToken(String username) {
-	return 	generateJwt(new HashMap<String,Object>(), username,accesExpirationInSeconds*1000l);
+		return 	generateJwt(new HashMap<String,Object>(), username,accesExpirationInSeconds*1000l);
 	}
 	public String generateRefreshToken(String username) {
 		return 	generateJwt(new HashMap<String,Object>(), username,refreshExpirationInSeconds*1000l);
-		}
+	}
 	private String generateJwt(Map<String, Object> claims,String username,Long expiry) {
-		
+
 		return  Jwts.builder()
 				.setClaims(claims)
 				.setSubject(username)
@@ -40,12 +43,21 @@ public class JwtService {
 				.signWith(getSignature(), SignatureAlgorithm.HS512)//signing Jwt with Key
 				.compact();
 	}
-	
+
 	private Key getSignature() {
 		byte[] secretBytes = Decoders.BASE64.decode(secret);
-		
 		return Keys.hmacShaKeyFor(secretBytes);
-		
+	}
+
+	public Claims jwtParser(String token){
+		JwtParser jwtParser = Jwts.parserBuilder().setSigningKey(getSignature()).build();
+		return jwtParser.parseClaimsJwt(token).getBody();
+	}
+	
+	public String extractUsername(String token) {
+		String username = jwtParser(token).getSubject();
+		return  username;
+
 	}
 
 }

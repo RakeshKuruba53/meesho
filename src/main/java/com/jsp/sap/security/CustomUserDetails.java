@@ -1,8 +1,10 @@
 package com.jsp.sap.security;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.jsp.sap.entity.User;
@@ -15,7 +17,7 @@ public class CustomUserDetails implements UserDetails{
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		
-		return null;
+		return Collections.singleton(new SimpleGrantedAuthority(user.getUserRole().name()));
 	}
 
 	@Override

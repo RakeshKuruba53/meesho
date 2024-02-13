@@ -1,5 +1,6 @@
 package com.jsp.sap.util;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,7 @@ public class ScheduledJobsClass {
 	@Autowired
 	RefreshTokenRepo refreshTokenRepo;
 	
-	@Scheduled(fixedDelay = 100000l)
+	//@Scheduled(fixedDelay = 100000l)
 	public void deleteBlockedUsers() 
 	{
 		List<AccessToken> blockedTokens = accessTokenRepo.findByIsBlocked(true);
@@ -35,8 +36,17 @@ public class ScheduledJobsClass {
 			for(RefreshToken refreshToken:blockedTokens1) {
 				refreshTokenRepo.delete(refreshToken);
 			}
-		
-		
+	}
+	//@Scheduled(fixedDelay = 10000l)
+	public void deletedExpiredTokens() {
+		List<AccessToken> list = accessTokenRepo.findByExpirationBefore(LocalDateTime.now());
+		for(AccessToken accessToken:list) {
+			accessTokenRepo.delete(accessToken);
+		}
+		List<RefreshToken> list2=refreshTokenRepo.findByExpirationBefore(LocalDateTime.now());
+		for(RefreshToken refreshToken:list2) {
+			refreshTokenRepo.delete(refreshToken);
+		}
 	}
 }
 

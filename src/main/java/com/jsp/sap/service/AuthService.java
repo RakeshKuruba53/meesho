@@ -22,8 +22,17 @@ public interface AuthService {
 
 	ResponseEntity<ResponseStructure<UserResponse>> verifyOtp(OtpModel otp);
 
-	ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest, HttpServletResponse httpServletResponse);
+	ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest, HttpServletResponse httpServletResponse, String refreshToken, String accessToken);
 
-	ResponseEntity<ResponseStructure<SimpleStructure>> logout(String accessToken, String refreshToken, HttpServletResponse httpServletResponse);
+	ResponseEntity<SimpleStructure> logout(String accessToken, String refreshToken, HttpServletResponse httpServletResponse);
+
+	ResponseEntity<SimpleStructure> revokeAllDeviceAccess(String accessToken, String refreshToken,
+			HttpServletResponse httpServletResponse);
+
+	ResponseEntity<SimpleStructure> revokeOtherDeviceAccess(String accessToken, String refreshToken,
+			HttpServletResponse httpServletResponse);
+
+	ResponseEntity<SimpleStructure> refreshLogin(String accessToken, String refreshToken,
+			HttpServletResponse httpServletResponse);
 
 }
